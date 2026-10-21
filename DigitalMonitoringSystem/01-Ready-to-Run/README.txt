@@ -48,3 +48,52 @@ NOTES
    - Policy "enforce" records the assignment; it does not change Windows
      settings by itself.
    - Re-issuing a device token disables the old token for that computer.
+
+STORAGE: SQLite (default) or PostgreSQL
+---------------------------------------
+By default everything is stored in data\mdm.db next to this folder. Nothing to
+install, and it keeps working with no internet connection.
+
+To use PostgreSQL instead - for example so the district server and a copy of
+this dashboard hosted on the internet share one set of devices - first create
+a PostgreSQL role and database. Connect as a PostgreSQL administrator, for
+example with `psql -U postgres -h localhost -d postgres`, then run:
+
+  CREATE ROLE mdm_app WITH LOGIN PASSWORD 'replace-with-a-strong-password';
+  CREATE DATABASE mdm_db OWNER mdm_app;
+
+In PowerShell, open this folder and install the PostgreSQL driver once using
+npm from Node.js 22.5 or newer:
+
+  npm install
+
+Set the connection and secrets in that same PowerShell window, then start the
+server:
+
+  $env:DATABASE_URL = "postgresql://mdm_app:replace-with-a-strong-password@localhost:5432/mdm_db"
+  $env:JWT_SECRET = (& .\node\node.exe -e "console.log(require('crypto').randomBytes(48).toString('hex'))").Trim()
+  $env:ADMIN_PASSWORD = "replace-with-a-strong-admin-password"
+  .\START-SYSTEM.bat
+
+Use `admin` and the `ADMIN_PASSWORD` value to sign in. If the database password
+contains URL-reserved characters, URL-encode it in `DATABASE_URL`. Keep the
+connection string and secrets private; do not put them in `config.json`.
+
+These environment variables apply only to this PowerShell window. Set them
+again when starting the server in a new window. PostgreSQL access must be
+available from the computer running the server.
+
+Without DATABASE_URL the server never touches npm and stays fully offline.
+
+IMPORTANT: every server pointing at the same database must use the SAME
+JWT_SECRET. Otherwise an administrator who signs in on one copy will be
+rejected by the other. The server prints a warning at start-up if
+DATABASE_URL is set without JWT_SECRET.
+
+The database schema is created automatically the first time a PostgreSQL
+server starts, and the 200 demo records are seeded then too. Because they are
+inserted one row at a time, that first start can take a minute or two against a
+remote database; later starts are immediate.
+
+Do not put your connection string or JWT_SECRET in config.json if you share
+this folder - use environment variables instead.

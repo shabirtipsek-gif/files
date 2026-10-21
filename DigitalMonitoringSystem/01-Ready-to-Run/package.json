@@ -1,0 +1,16 @@
+{
+  "name": "mdm-server",
+  "private": true,
+  "version": "2.0.0",
+  "description": "Digital Monitoring System server. Runs with no dependencies on SQLite; set DATABASE_URL to store data in PostgreSQL instead.",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "dependencies": {
+    "pg": "^8.16.3"
+  }
+}

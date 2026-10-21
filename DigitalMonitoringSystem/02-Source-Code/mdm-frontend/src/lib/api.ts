@@ -117,7 +117,28 @@ export type MobilePairingResponse = {
   expiresAt: string
 }
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5103'
+/**
+ * Where the API lives, as a prefix for every request.
+ *
+ * Defaults to the empty string, meaning "same origin". The ready-to-run build serves the
+ * dashboard and the API from a single server on a single port, so relative URLs always reach
+ * the correct host — both on the server itself and on every other computer on the network.
+ * Hard-coding an absolute address here would make the dashboard call its own localhost on any
+ * machine other than the one running the server.
+ *
+ * Set `VITE_API_BASE_URL` to an absolute URL only when the dashboard is hosted away from its
+ * API, for example a copy deployed to Vercel talking to an API reachable over the internet.
+ * Vite inlines this at build time, so the variable must exist when `npm run build` runs.
+ */
+const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '') ?? ''
+
+export const API_BASE_URL = configuredBaseUrl
+
+/**
+ * The API address to show to a person. Same-origin requests have no meaningful prefix of
+ * their own, so the page's own origin is displayed instead.
+ */
+export const API_DISPLAY_URL = API_BASE_URL || window.location.origin
 
 export class ApiError extends Error {
   status: number
@@ -138,7 +159,7 @@ async function request<T>(path: string, token: string | null, init: RequestInit 
   try {
     response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers })
   } catch {
-    throw new ApiError(`Cannot reach the API at ${API_BASE_URL}. Is it running?`, 0)
+    throw new ApiError(`Cannot reach the API at ${API_DISPLAY_URL}. Is it running?`, 0)
   }
 
   if (!response.ok) {

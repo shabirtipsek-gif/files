@@ -11,8 +11,33 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddValidation();
 builder.Services.AddSignalR();
+var databaseProvider = builder.Configuration["Database:Provider"]?.Trim();
+var connectionString = builder.Configuration.GetConnectionString("Mdm");
 builder.Services.AddDbContext<MdmDbContext>(options =>
-    options.UseSqlite("Data Source=mdm.db"));
+{
+    switch (databaseProvider?.ToLowerInvariant())
+    {
+        case "postgresql":
+        case "postgres":
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new InvalidOperationException(
+                    "The PostgreSQL connection string is missing. Configure ConnectionStrings:Mdm "
+                    + "or the ConnectionStrings__Mdm environment variable.");
+            }
+
+            options.UseNpgsql(connectionString, postgres => postgres.EnableRetryOnFailure());
+            break;
+        case "sqlite":
+            options.UseSqlite(string.IsNullOrWhiteSpace(connectionString)
+                ? "Data Source=mdm.db"
+                : connectionString);
+            break;
+        default:
+            throw new InvalidOperationException(
+                $"Unsupported Database:Provider '{databaseProvider}'. Set it to PostgreSQL or SQLite.");
+    }
+});
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 if (allowedOrigins.Length == 0 && !builder.Environment.IsDevelopment())

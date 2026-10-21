@@ -5,6 +5,7 @@ import { sampleInventory, sampleInventoryCsv } from './lib/sampleInventory'
 import {
   acknowledgeAlert,
   API_BASE_URL,
+  API_DISPLAY_URL,
   ApiError,
   enrollDevice,
   enforcePolicy,
@@ -344,7 +345,9 @@ function App() {
   const agentConfig = lastEnrollment
     ? JSON.stringify(
         {
-          ApiBaseUrl: lastEnrollment.apiBaseUrl || API_BASE_URL,
+          // The agent runs on another computer, so it needs an absolute address it can
+          // reach. The server supplies the LAN address; the page origin is the fallback.
+          ApiBaseUrl: lastEnrollment.apiBaseUrl || API_DISPLAY_URL,
           DeviceId: lastEnrollment.id,
           DeviceToken: lastEnrollment.enrollmentToken,
           IntervalSeconds: 30,
@@ -572,7 +575,13 @@ function App() {
           <button className="primary-btn" type="submit" disabled={loggingIn}>
             {loggingIn ? 'Signing in…' : 'Sign in'}
           </button>
-          <small className="muted">API: {API_BASE_URL}</small>
+          <small className="muted">API: {API_DISPLAY_URL}</small>
+          {!API_BASE_URL && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && (
+            <small className="muted">
+              This copy is being served from a different computer than its API. Set{' '}
+              <code>VITE_API_BASE_URL</code> when building so it knows where to connect.
+            </small>
+          )}
         </form>
       </div>
     )
