@@ -163,6 +163,33 @@ VITE_API_BASE_URL=http://192.168.1.20:5103
 
 If the frontend is served from another computer, add its exact origin to `Cors:AllowedOrigins` or the corresponding environment variable.
 
+## Deploy the dashboard and API
+
+The dashboard is configured for Vercel, and the API includes a Dockerfile for Railway. Railway hosts the API and PostgreSQL; Vercel builds the dashboard. Create/sign in to both provider accounts using their official sites, then import this GitHub repository (`shabirtipsek-gif/files`) into each service. Do not send passwords, database URLs or secret values in chat or commit them to this repository.
+
+### Deploy the API and PostgreSQL on Railway
+
+1. Create a Railway project and add a PostgreSQL service.
+2. Add a service from the `shabirtipsek-gif/files` GitHub repository. Set its root directory to `DigitalMonitoringSystem/02-Source-Code`; Railway will build the `Dockerfile` there.
+3. In the API service variables, set:
+   - `Database__Provider` = `PostgreSQL`
+   - `ConnectionStrings__Mdm` = `Host=${{Postgres.PGHOST}};Port=${{Postgres.PGPORT}};Database=${{Postgres.PGDATABASE}};Username=${{Postgres.PGUSER}};Password=${{Postgres.PGPASSWORD}};SSL Mode=Require;Trust Server Certificate=true`
+   - `Jwt__Key` = a newly generated random secret of at least 32 bytes
+   - `Admin__Username` = your chosen administrator username
+   - `Admin__Password` = a unique, strong administrator password
+   - `Cors__AllowedOrigins__0` = the exact Vercel dashboard origin, added after Vercel deployment (for example, `https://your-project.vercel.app`)
+4. If your Railway PostgreSQL service is not named `Postgres`, update the `${{Postgres.*}}` references to match its Railway service name.
+5. Enable Railway public networking for the API service. The container listens on Railway's `PORT` and provides `/health` for the health check. The API creates its schema on first start; Railway must have a reachable PostgreSQL service before the API starts.
+
+### Deploy the dashboard on Vercel
+
+1. Import the same GitHub repository as a Vercel project and set the root directory to `DigitalMonitoringSystem/02-Source-Code/mdm-frontend`.
+2. Add the build environment variable `VITE_API_BASE_URL` with the Railway API's public HTTPS origin (for example, `https://your-api.up.railway.app`, without a trailing slash).
+3. Deploy. Copy the Vercel production origin into Railway's `Cors__AllowedOrigins__0` variable and redeploy the API.
+4. Open the Vercel production URL and sign in using the administrator username/password configured in Railway.
+
+The API URL is intended for HTTPS public access with authentication enabled. Treat the dashboard and device telemetry as sensitive organizational information; use strong unique credentials and only make it public with authorization from the system owner. The Ready-to-Run package remains a separate SQLite-by-default deployment.
+
 ## Monitoring behaviour
 
 - Heartbeat interval: 30 seconds by default.
